@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.colors import ListedColormap
 import matplotlib.patches as patches
+import random
 
 from fizzbuzz_core import (
     is_prime, generate_fibonacci_set, BlockType, RuleBlock, 
@@ -23,13 +24,14 @@ from fizzbuzz_core import (
 class BlockWidget(tk.Frame):
     # On-screen representation of a rule block
     
-    def __init__(self, parent, block: RuleBlock, on_edit=None, on_delete=None, on_move=None):
+    def __init__(self, parent, block: RuleBlock, on_edit=None, on_delete=None, on_move=None, block_color=None):
         super().__init__(parent, relief=tk.RAISED, bd=2, bg='#f0f0f0')
         
         self.block = block
         self.on_edit = on_edit
         self.on_delete = on_delete
         self.on_move = on_move
+        self.block_color = block_color
         
         self.setup_widget()
     
@@ -37,15 +39,28 @@ class BlockWidget(tk.Frame):
         # Set up the visual elements of the block
         self.columnconfigure(1, weight=1)
         
-        # Block type indicator with color coding
-        type_colors = {
-            BlockType.DIVISOR: "#3B82F6",
-            BlockType.PRIME: "#EF4444", 
-            BlockType.FIBONACCI: "#10B981",
-            BlockType.RANGE: "#F59E0B"
-        }
+        # Block type indicator with custom or default color
+        if self.block_color:
+            indicator_color = self.block_color
+        else:
+            # Keep special colors for Fizz and Buzz
+            if self.block.block_type == BlockType.DIVISOR:
+                word = self.block.properties.get('word', '')
+                if word == 'Fizz':
+                    indicator_color = "#3B82F6"  # Blue
+                elif word == 'Buzz':
+                    indicator_color = "#EF4444"  # Red
+                else:
+                    indicator_color = "#6B7280"  # Default gray
+            else:
+                type_colors = {
+                    BlockType.PRIME: "#EF4444", 
+                    BlockType.FIBONACCI: "#10B981",
+                    BlockType.RANGE: "#F59E0B"
+                }
+                indicator_color = type_colors.get(self.block.block_type, "#6B7280")
         
-        type_indicator = tk.Frame(self, width=8, bg=type_colors.get(self.block.block_type, "#6B7280"))
+        type_indicator = tk.Frame(self, width=8, bg=indicator_color)
         type_indicator.grid(row=0, column=0, rowspan=3, sticky="ns", padx=(5, 10), pady=5)
         
         # Block title and description
@@ -327,12 +342,20 @@ class GUI:
     
     def __init__(self):
         self.root = tk.Tk()
-        self.root.title("Block-Based Fizz Buzz Generator")
-        self.root.geometry("1200x800")
+        self.root.title("FizzBuzz App")
+        
+        # Maximize the window
+        self.root.state('zoomed')  
+        
+        # IF YOU ARE USING MAC OR LINUX UNCOMMENT THE FOLLOWING:
+        # self.root.geometry("1200x800")  # Default size
+
+        
         
         # Data
         self.blocks: List[RuleBlock] = []
         self.block_widgets: Dict[str, BlockWidget] = {}
+        self.block_colors: Dict[str, str] = {}  # Map block IDs to colors
         self.is_generating = False
         
         # Cleanup
@@ -541,11 +564,41 @@ class GUI:
         # Create default Fizz and Buzz blocks
         import uuid
         
+        fizz_id = str(uuid.uuid4())
+        buzz_id = str(uuid.uuid4())
+        
         self.blocks = [
-            RuleBlock(str(uuid.uuid4()), BlockType.DIVISOR, "Fizz", {'divisor': 3, 'word': 'Fizz'}, 0),
-            RuleBlock(str(uuid.uuid4()), BlockType.DIVISOR, "Buzz", {'divisor': 5, 'word': 'Buzz'}, 1)
+            RuleBlock(fizz_id, BlockType.DIVISOR, "Fizz", {'divisor': 3, 'word': 'Fizz'}, 0),
+            RuleBlock(buzz_id, BlockType.DIVISOR, "Buzz", {'divisor': 5, 'word': 'Buzz'}, 1)
         ]
+        
+        # Assign default colors
+        self.block_colors[fizz_id] = "#3B82F6"  # Blue for Fizz
+        self.block_colors[buzz_id] = "#EF4444"  # Red for Buzz
+        
         self.refresh_workspace()
+    
+    def generate_random_color(self) -> str:
+        # Generate a random bright color (avoiding gray tones)
+        colors = ["#FF6B6B", "#4ECDC4", "#45B7D1", "#96CEB4", "#FFEAA7", 
+                  "#DDA0DD", "#98D8C8", "#F7DC6F", "#BB8FCE", "#85C1E9",
+                  "#F8C471", "#82E0AA", "#F1948A", "#85CEBC", "#D7BDE2"]
+        return random.choice(colors)
+    
+    def assign_block_color(self, block: RuleBlock) -> str:
+        # Assign color to block, keeping Fizz blue and Buzz red
+        if block.block_type == BlockType.DIVISOR:
+            word = block.properties.get('word', '')
+            if word == 'Fizz':
+                return "#3B82F6"  # Blue
+            elif word == 'Buzz':
+                return "#EF4444"  # Red
+        
+        # Generate random color for other blocks
+        color = self.generate_random_color()
+        while color in self.block_colors.values():  # Avoid duplicates
+            color = self.generate_random_color()
+        return color
     
     def refresh_workspace(self):
         # Refresh the workspace (Done after adding/deleting/editing or moving blocks)
@@ -556,8 +609,12 @@ class GUI:
         sorted_blocks = sorted(self.blocks, key=lambda b: b.order)
         
         for i, block in enumerate(sorted_blocks):
+            # Assign color if not already assigned
+            if block.id not in self.block_colors:
+                self.block_colors[block.id] = self.assign_block_color(block)
+            
             widget = BlockWidget(self.workspace_frame, block, self.edit_block, 
-                               self.delete_block, self.move_block)
+                               self.delete_block, self.move_block, self.block_colors[block.id])
             widget.pack(fill="x", padx=5, pady=2)
             self.block_widgets[block.id] = widget
             
@@ -593,6 +650,9 @@ class GUI:
     def delete_block(self, block_id: str):
         # Delete a block
         self.blocks = [b for b in self.blocks if b.id != block_id]
+        # Remove color mapping
+        if block_id in self.block_colors:
+            del self.block_colors[block_id]
         self.reorder_blocks()
         self.refresh_workspace()
     
@@ -617,6 +677,7 @@ class GUI:
     def clear_all_blocks(self):
         # Clear all blocks
         self.blocks.clear()
+        self.block_colors.clear()  # Clear color mappings
         self.refresh_workspace()
     
     def generate_fizzbuzz(self):
@@ -778,81 +839,103 @@ class GUI:
         self.heatmap_canvas.draw()
     
     def get_type_value(self, result_type: str) -> int:
-        # Map result types to numeric values for colormap
-        type_mapping = {
-            'number': 0,
-            'Fizz': 1,
-            'Buzz': 2, 
-            'FizzBuzz': 3,
-            'Prime': 4,
-            'Fib': 5,
-            'divisor_custom': 6,
-            'range_custom': 7,
-            'combination': 8
-        }
-        return type_mapping.get(result_type, 8)  # Default to combination
+        # Map result types to numeric values based on current blocks and core result types
+        if result_type == 'number':
+            return 0
+        
+        # Handle core-defined single block types
+        if result_type == 'Fizz':
+            return 1  # Always position 1 for Fizz
+        elif result_type == 'Buzz':
+            return 2  # Always position 2 for Buzz
+        elif result_type in ['Prime', 'Fib', 'divisor_custom', 'range_custom']:
+            # Find the matching block and return its position
+            value = 1
+            for block in sorted(self.blocks, key=lambda b: b.order):
+                word = block.properties.get('word', '')
+                if ((result_type == 'Prime' and block.block_type == BlockType.PRIME) or
+                    (result_type == 'Fib' and block.block_type == BlockType.FIBONACCI) or
+                    (result_type == 'divisor_custom' and block.block_type == BlockType.DIVISOR and word not in ['Fizz', 'Buzz']) or
+                    (result_type == 'range_custom' and block.block_type == BlockType.RANGE)):
+                    return value
+                value += 1
+        
+        # Handle special combinations
+        if result_type == 'FizzBuzz' and self.has_fizz_and_buzz():
+            return len(self.blocks) + 1
+        
+        # General combination
+        if result_type == 'combination':
+            return len(self.blocks) + 2
+        
+        # Fallback - shouldn't happen
+        return len(self.blocks) + 2
+    
+    def get_block_color_for_result(self, result_type: str) -> str:
+        # Get block color based on result type
+        if result_type == 'Fizz':
+            return "#3B82F6"  # Blue
+        elif result_type == 'Buzz':
+            return "#EF4444"  # Red
+        elif result_type == 'FizzBuzz':
+            return "#8B5CF6"  # Purple for fizzbuzz combination
+        
+        # For other types, find matching block
+        for block in self.blocks:
+            word = block.properties.get('word', '')
+            if word == result_type and block.id in self.block_colors:
+                return self.block_colors[block.id]
+        
+        # Default colors for special types
+        if result_type == 'combination':
+            return "#FF2ED9"  # Pink
+        elif result_type == 'number':
+            return "#E5E7EB"  # Light gray
+        
+        return "#6B7280"  # Default gray
     
     def get_colors_and_labels(self) -> Tuple[List[str], List[str]]:
-        # Get color mapping and labels for different replacement types
-        color_map = {
-            'number': ("#E5E7EB", "Numbers"),         # Light gray for unchanged numbers
-            'Fizz': ("#3B82F6", "Fizz"),             # Blue for Fizz
-            'Buzz': ("#EF4444", "Buzz"),             # Red for Buzz
-            'FizzBuzz': ("#8B5CF6", "FizzBuzz"),     # Purple for combined
-            'Prime': ("#F59E0B", "Prime"),           # Orange for Prime
-            'Fib': ("#10B981", "Fib"),               # Green for Fibonacci
-            'divisor_custom': ("#00F2FF", "Custom Divisor"),  # Turquoise for custom divisor words
-            'range_custom': ("#A855F7", "Custom Range"),     # Purple for custom range words
-            'combination': ("#FF2ED9", "combination")         # Pink for other combinations
-        }
-        
-        # Base types in order of type values
-        base_types = ['number', 'Fizz', 'Buzz', 'FizzBuzz', 'Prime', 'Fib', 
-                     'divisor_custom', 'range_custom', 'combination']
-        
+        # Get color mapping and labels using block colors, matching core result types
         colors = []
         labels = []
         
-        for type_name in base_types:
-            if type_name in color_map:
-                color, label = color_map[type_name]
-                colors.append(color)
-                labels.append(label)
+        # Add number color (always first - index 0)
+        colors.append("#E5E7EB")
+        labels.append("Numbers")
+        
+        # Add colors for active blocks in order (indices 1, 2, 3, ...)
+        for block in sorted(self.blocks, key=lambda b: b.order):
+            word = block.properties.get('word', '')
+            if word and block.id in self.block_colors:
+                colors.append(self.block_colors[block.id])
+                # Use the actual word as the label
+                if block.block_type == BlockType.PRIME:
+                    labels.append(f"Prime ({word})")
+                elif block.block_type == BlockType.FIBONACCI:
+                    labels.append(f"Fib ({word})")
+                else:
+                    labels.append(word)
+        
+        # Add FizzBuzz combination color (index len(blocks) + 1)
+        if self.has_fizz_and_buzz():
+            colors.append("#8B5CF6")  # Purple for FizzBuzz
+            labels.append("FizzBuzz")
+        
+        # Add general combination color (index len(blocks) + 2)
+        if len(self.blocks) > 1:
+            colors.append("#FF2ED9")  # Pink for other combinations
+            labels.append("Combinations")
         
         return colors, labels
     
     def create_matplotlib_legend(self, type_labels: List[str]):
-        # Create a simple legend for the matplotlib heatmap
-        colors, _ = self.get_colors_and_labels()
+        # Create a simple legend for the matplotlib heatmap using actual block colors and labels
+        colors, labels = self.get_colors_and_labels()
         
-        # Determine which types are actually used
-        used_types = {'Numbers'}  # Always include numbers
-        
-        for block in self.blocks:
-            if block.block_type == BlockType.DIVISOR:
-                word = block.properties.get('word', '')
-                if word in ['Fizz', 'Buzz']:
-                    used_types.add(word)
-                else:
-                    used_types.add('Custom Divisor')
-            elif block.block_type == BlockType.PRIME:
-                used_types.add('Prime')
-            elif block.block_type == BlockType.FIBONACCI:
-                used_types.add('Fib')
-            elif block.block_type == BlockType.RANGE:
-                used_types.add('Custom Range')
-        
-        # Add combination types if applicable
-        if self.has_fizz_and_buzz():
-            used_types.add('FizzBuzz')
-        if len(self.blocks) > 1:
-            used_types.add('combination')
-        
-        # Create legend patches for used types only
+        # Create legend patches for all active types
         legend_elements = []
-        for color, label in zip(colors, type_labels):
-            if label in used_types:
-                legend_elements.append(patches.Rectangle((0, 0), 1, 1, facecolor=color, label=label))
+        for color, label in zip(colors, labels):
+            legend_elements.append(patches.Rectangle((0, 0), 1, 1, facecolor=color, label=label))
         
         # Position legend below the plot
         if legend_elements:
