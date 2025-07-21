@@ -118,12 +118,7 @@ class BlockWidget(tk.Frame):
     def on_move_down(self):
         if self.on_move:
             self.on_move(self.block.id, 1)
-    
-    def update_block(self, block: RuleBlock):
-        # Update the block data and refresh display
-        self.block = block
-        self.title_label.configure(text=f"{block.block_type.value.title()}: {block.name}")
-        self.desc_label.configure(text=self.get_description())
+
     
     def update_arrow_states(self, is_first: bool, is_last: bool):
         # Update arrow button states based on block position (Disabled if first/last)
@@ -560,7 +555,6 @@ class GUI:
         self.refresh_workspace()
     
     def generate_random_color(self) -> str:
-        # Generate a random bright color (avoiding gray tones)
         colors = ["#FF6B6B", "#4ECDC4", "#45B7D1", "#96CEB4", "#FFEAA7", 
                   "#DDA0DD", "#98D8C8", "#F7DC6F", "#BB8FCE", "#85C1E9",
                   "#F8C471", "#82E0AA", "#F1948A", "#85CEBC", "#D7BDE2"]
@@ -739,13 +733,6 @@ class GUI:
         self.results_text.delete("1.0", tk.END)
         self.clear_heatmap()
     
-    def update_progress_and_results(self, progress: float, new_results: List[str]):
-        # Update progress bar and results display
-        self.progress_var.set(progress)
-        for result in new_results:
-            self.results_text.insert(tk.END, result + '\n')
-        self.results_text.see(tk.END)
-    
     def finalize_generation(self, heatmap_data: List[Tuple[int, str, str]], total_numbers: int):
         # Create heatmap and set completion status
         self.create_heatmap(heatmap_data)
@@ -849,29 +836,6 @@ class GUI:
         
         # Fallback just incase
         return len(self.blocks) + 2
-    
-    def get_block_color_for_result(self, result_type: str) -> str:
-        # Get block color based on result type
-        if result_type == 'Fizz':
-            return "#3B82F6"  # Blue
-        elif result_type == 'Buzz':
-            return "#EF4444"  # Red
-        elif result_type == 'FizzBuzz':
-            return "#8B5CF6"  # Purple for fizzbuzz combination
-        
-        # For other types, find matching block
-        for block in self.blocks:
-            word = block.properties.get('word', '')
-            if word == result_type and block.id in self.block_colors:
-                return self.block_colors[block.id]
-        
-        # Default colors for special types
-        if result_type == 'combination':
-            return "#FF2ED9"  # Pink
-        elif result_type == 'number':
-            return "#E5E7EB"  # Light gray
-        
-        return "#6B7280"  # Default gray
     
     def get_colors_and_labels(self) -> Tuple[List[str], List[str]]:
         # Get colour mapping and labels using block colours, matching core result types
