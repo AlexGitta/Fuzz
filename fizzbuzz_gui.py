@@ -843,32 +843,30 @@ class GUI:
         if result_type == 'number':
             return 0
         
-        # Handle core-defined single block types
-        if result_type == 'Fizz':
-            return 1  # Always position 1 for Fizz
-        elif result_type == 'Buzz':
-            return 2  # Always position 2 for Buzz
-        elif result_type in ['Prime', 'Fib', 'divisor_custom', 'range_custom']:
-            # Find the matching block and return its position
-            value = 1
-            for block in sorted(self.blocks, key=lambda b: b.order):
-                word = block.properties.get('word', '')
-                if ((result_type == 'Prime' and block.block_type == BlockType.PRIME) or
-                    (result_type == 'Fib' and block.block_type == BlockType.FIBONACCI) or
-                    (result_type == 'divisor_custom' and block.block_type == BlockType.DIVISOR and word not in ['Fizz', 'Buzz']) or
-                    (result_type == 'range_custom' and block.block_type == BlockType.RANGE)):
-                    return value
-                value += 1
+        # Find the correct index by matching against the actual block order
+        value = 1  # Start at 1 (after numbers at index 0)
+        for block in sorted(self.blocks, key=lambda b: b.order):
+            word = block.properties.get('word', '')
+            
+            # Check if this block matches the result type
+            if ((result_type == 'Fizz' and word == 'Fizz') or
+                (result_type == 'Buzz' and word == 'Buzz') or
+                (result_type == 'Prime' and block.block_type == BlockType.PRIME) or
+                (result_type == 'Fib' and block.block_type == BlockType.FIBONACCI) or
+                (result_type == 'divisor_custom' and block.block_type == BlockType.DIVISOR and word not in ['Fizz', 'Buzz']) or
+                (result_type == 'range_custom' and block.block_type == BlockType.RANGE)):
+                return value
+            value += 1
         
-        # Handle special combinations
+        # Handle specific FizzBuzz case
         if result_type == 'FizzBuzz' and self.has_fizz_and_buzz():
             return len(self.blocks) + 1
         
-        # General combination
+        # Others combination
         if result_type == 'combination':
             return len(self.blocks) + 2
         
-        # Fallback - shouldn't happen
+        # Fallback just incase
         return len(self.blocks) + 2
     
     def get_block_color_for_result(self, result_type: str) -> str:
@@ -895,15 +893,15 @@ class GUI:
         return "#6B7280"  # Default gray
     
     def get_colors_and_labels(self) -> Tuple[List[str], List[str]]:
-        # Get color mapping and labels using block colors, matching core result types
+        # Get colour mapping and labels using block colours, matching core result types
         colors = []
         labels = []
         
-        # Add number color (always first - index 0)
+        # Add number colour (always first - index 0)
         colors.append("#E5E7EB")
         labels.append("Numbers")
         
-        # Add colors for active blocks in order (indices 1, 2, 3, ...)
+        # Add colours for active blocks in order (indices 1, 2, 3, ...)
         for block in sorted(self.blocks, key=lambda b: b.order):
             word = block.properties.get('word', '')
             if word and block.id in self.block_colors:
@@ -921,7 +919,7 @@ class GUI:
             colors.append("#8B5CF6")  # Purple for FizzBuzz
             labels.append("FizzBuzz")
         
-        # Add general combination color (index len(blocks) + 2)
+        # Add general combination colour (index len(blocks) + 2)
         if len(self.blocks) > 1:
             colors.append("#FF2ED9")  # Pink for other combinations
             labels.append("Combinations")
