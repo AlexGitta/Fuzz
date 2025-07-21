@@ -38,27 +38,8 @@ class BlockWidget(tk.Frame):
     def setup_widget(self):
         # Set up the visual elements of the block
         self.columnconfigure(1, weight=1)
-        
-        # Block type indicator with custom or default color
-        if self.block_color:
-            indicator_color = self.block_color
-        else:
-            # Keep special colors for Fizz and Buzz
-            if self.block.block_type == BlockType.DIVISOR:
-                word = self.block.properties.get('word', '')
-                if word == 'Fizz':
-                    indicator_color = "#3B82F6"  # Blue
-                elif word == 'Buzz':
-                    indicator_color = "#EF4444"  # Red
-                else:
-                    indicator_color = "#6B7280"  # Default gray
-            else:
-                type_colors = {
-                    BlockType.PRIME: "#EF4444", 
-                    BlockType.FIBONACCI: "#10B981",
-                    BlockType.RANGE: "#F59E0B"
-                }
-                indicator_color = type_colors.get(self.block.block_type, "#6B7280")
+           
+        indicator_color = self.block_color
         
         type_indicator = tk.Frame(self, width=8, bg=indicator_color)
         type_indicator.grid(row=0, column=0, rowspan=3, sticky="ns", padx=(5, 10), pady=5)
@@ -777,7 +758,7 @@ class GUI:
         self.progress_var.set(100)
     
     def create_heatmap(self, results_data: List[Tuple[int, str, str]]):
-        # Create a professional matplotlib heatmap visualization
+        # Create a matplotlib heatmap visualization
         self.clear_heatmap()
         
         if not results_data:
