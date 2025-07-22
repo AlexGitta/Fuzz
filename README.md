@@ -20,7 +20,7 @@ Using only standard python libraries and matplotlib.
 1. Clone or download the project files
 2. Install dependencies:
    ```
-   pip install -r requirements.txt
+   pip install matplotlib
    ```
 3. Run the application:
    ```
