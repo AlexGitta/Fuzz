@@ -571,8 +571,9 @@ class GUI:
         
         # Generate random color for other blocks
         color = self.generate_random_color()
-        while color in self.block_colors.values():  # Avoid duplicates
-            color = self.generate_random_color()
+        if len(self.block_colors) < 15: # If we havent reached limit of 15 colours 
+            while color in self.block_colors.values():  # Avoid duplicates
+                color = self.generate_random_color()
         return color
     
     def refresh_workspace(self):
