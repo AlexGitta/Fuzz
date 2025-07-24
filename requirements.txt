@@ -1,0 +1,6 @@
+
+matplotlib>=3.7.0
+numpy>=1.24.0
+
+# tkinter should be included with Python standard library, if not just install it separately
+
